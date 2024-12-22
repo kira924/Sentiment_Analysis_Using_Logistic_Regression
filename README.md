@@ -49,6 +49,3 @@ Detailed results, including the confusion matrix and accuracy score, are display
 ## Future Enhancements
 - Add more advanced machine learning models like SVMs or neural networks for performance comparison.
 - Deploy the model as a web app using frameworks like Flask or Streamlit.
-
-## Acknowledgments
-- Sentiment140 dataset: [Kaggle](https://www.kaggle.com/datasets/kazanova/sentiment140)
