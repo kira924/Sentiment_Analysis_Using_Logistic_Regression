@@ -11,10 +11,6 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 import pickle
 
-
-import nltk
-nltk.data.path.append("./nltk_data")
-
 # ============ Text Preprocessing ============
 def process_text(content):
     content = re.sub(r"http\S+", "", content)
