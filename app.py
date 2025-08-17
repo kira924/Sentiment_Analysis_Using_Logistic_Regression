@@ -1,56 +1,64 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
 import re
-import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-from nltk.stem.porter import PorterStemmer
-from nltk.stem import WordNetLemmatizer
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
 import pickle
 
-# ============ Text Preprocessing ============
-def process_text(content):
-    content = re.sub(r"http\S+", "", content)
-    content = re.sub(r"@\w+", "", content)
-    content = re.sub(r"#\w+", "", content)
-    tokens = word_tokenize(content)
-    tokens = [token for token in tokens if token.isalpha()]
-    tokens = [token.lower() for token in tokens]
-    lemmatizer = WordNetLemmatizer()
-    tokens = [lemmatizer.lemmatize(word) for word in tokens if word not in stopwords.words("english")]
-    porter_stemmer = PorterStemmer()
-    tokens = [porter_stemmer.stem(word) for word in tokens]
+# ======== Lightweight text preprocessing (no NLTK) ========
+# Minimal English stopword set (static, no downloads)
+STOPWORDS = {
+    "i","me","my","myself","we","our","ours","ourselves","you","your","yours",
+    "yourself","yourselves","he","him","his","himself","she","her","hers",
+    "herself","it","its","itself","they","them","their","theirs","themselves",
+    "what","which","who","whom","this","that","these","those","am","is","are",
+    "was","were","be","been","being","have","has","had","having","do","does",
+    "did","doing","a","an","the","and","but","if","or","because","as","until",
+    "while","of","at","by","for","with","about","against","between","into",
+    "through","during","before","after","above","below","to","from","up","down",
+    "in","out","on","off","over","under","again","further","then","once","here",
+    "there","when","where","why","how","all","any","both","each","few","more",
+    "most","other","some","such","no","nor","not","only","own","same","so",
+    "than","too","s","t","can","will","just","don","should","now"
+}
+
+def process_text(text: str) -> str:
+    # remove urls, mentions, hashtags
+    text = re.sub(r"(http\S+|www\.\S+)", " ", text)
+    text = re.sub(r"[@#]\w+", " ", text)
+    # keep letters and spaces
+    text = re.sub(r"[^A-Za-z\s]", " ", text)
+    # normalize spaces + lowercase
+    text = re.sub(r"\s+", " ", text).strip().lower()
+    # simple tokenization + stopword filtering
+    tokens = [tok for tok in text.split() if tok not in STOPWORDS and len(tok) > 1]
     return " ".join(tokens)
 
-# ============ Load Trained Model & Vectorizer ============
+# ======== Load trained model + vectorizer ========
 @st.cache_resource
 def load_model():
-    model = pickle.load(open("sentiment_model.pkl", "rb"))
-    vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
+    with open("sentiment_model.pkl", "rb") as f:
+        model = pickle.load(f)
+    with open("vectorizer.pkl", "rb") as f:
+        vectorizer = pickle.load(f)
     return model, vectorizer
 
 st.title("Sentiment Analysis App")
 st.write("Enter any English comment and the model will analyze its sentiment.")
 
-# Load model
+# Load
 try:
     model, vectorizer = load_model()
-except:
+except Exception as e:
     st.error("Model and vectorizer pickle files are required to run this app.")
     st.stop()
 
-# ============ User Input ============
+# ======== UI ========
 user_comment = st.text_area("Enter your comment here:")
 
 if st.button("Analyze Sentiment"):
-    if user_comment.strip() == "":
+    if not user_comment.strip():
         st.warning("Please enter a comment first.")
     else:
-        processed = process_text(user_comment)
-        vector = vectorizer.transform([processed])
-        prediction = model.predict(vector)[0]
-        sentiment = "Positive" if prediction == 1 else "Negative"
+        cleaned = process_text(user_comment)
+        vec = vectorizer.transform([cleaned])
+        pred = model.predict(vec)[0]
+        sentiment = "Positive" if pred == 1 else "Negative"
         st.success(f"Predicted Sentiment: **{sentiment}**")
